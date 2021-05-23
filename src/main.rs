@@ -1,9 +1,7 @@
 #![windows_subsystem = "windows"]
 #![feature(with_options)]
 
-use iced::{
-    button, Application, Button, Column, Command, Container, Element, HorizontalAlignment, Length, Settings, Text, Align, window
-};
+use iced::{Align, Application, Button, Clipboard, Column, Command, Container, Element, Error, HorizontalAlignment, Length, Settings, Text, button, window};
 use std::path::Path;
 use std::fs;
 use std::fs::File;
@@ -13,22 +11,30 @@ use std::io::{
 use std::env;
 use std::process;
 
-pub fn main() {
+#[cfg(target_family = "unix")]
+static HOST_FILE: &str = "/etc/hosts";
+#[cfg(target_family = "windows")]
+static HOST_FILE: &str = "C:\\Windows\\System32\\drivers\\etc\\hosts";
+
+pub fn main() -> Result<(), Error> {
     let args: Vec<String> = env::args().collect();
     if args.len() == 2 && args[1] == "clean" {
-        std::process::exit(match clean() {
-            Ok(_) => 0,
-            Err(err) => {
-                eprintln!("error: {:?}", err);
-                1
-            }
-        });
+        let result = clean();
+        if result.is_err() {
+            eprintln!("error: {:?}", result.err());
+        }
+        return Ok(());
     } else {
-        MojangAuth::run(Settings {
+        return MojangAuth::run(Settings {
             window: window::Settings {
                 size: (350, 250),
                 resizable: true,
                 decorations: true,
+                always_on_top: false,
+                transparent: false,
+                icon: None,
+                min_size: None,
+                max_size: None
             },
             ..Settings::default()
         });
@@ -70,7 +76,7 @@ impl Application for MojangAuth {
         String::from("Mojang Auth Checker")
     }
 
-    fn update(&mut self, message: Message) -> Command<Message> {
+    fn update(&mut self, message: Message, _clipboard: &mut Clipboard) -> Command<Message> {
         match self {
             MojangAuth::Loading => {
                 match message {
@@ -206,7 +212,7 @@ impl HostFile {
 
         let mut contents = String::new();
 
-        let mut file = async_std::fs::File::open("C:\\Windows\\System32\\drivers\\etc\\hosts")
+        let mut file = async_std::fs::File::open(HOST_FILE)
             .await
             .map_err(|_| LoadError::FileError)?;
 
@@ -221,7 +227,7 @@ impl HostFile {
 }
 
 fn clean() -> Result<(), std::io::Error> {
-    let path = Path::new("C:\\Windows\\System32\\drivers\\etc\\hosts");
+    let path = Path::new(HOST_FILE);
     let contents = fs::read_to_string(&path)?;
 
     let file = File::with_options().write(true).truncate(true).open(&path)?;

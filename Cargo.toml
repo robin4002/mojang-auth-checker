@@ -7,7 +7,7 @@ build = "build.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-iced = { version = "0.1", features = ["image", "debug", "async-std"] }
+iced = { version = "0.3.0", features = ["image", "debug", "async-std", "glow", "glow_canvas"] }
 async-std = "1.0"
 
 [build-dependencies]
